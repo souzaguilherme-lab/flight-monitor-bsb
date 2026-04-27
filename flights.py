@@ -25,15 +25,18 @@ def get_dates():
 def fetch_price(dest):
     ida, volta = get_dates()
 
-    url = f"https://api.apify.com/v2/acts/scrapemint~google-flights-scraper/run-sync-get-dataset-items?token={API_TOKEN}"
+    url = f"https://api.apify.com/v2/acts/apify~google-flights-scraper/run-sync-get-dataset-items?token={API_TOKEN}"
 
-    payload = {
-        "origin": ORIGIN,
-        "destination": dest,
-        "departureDate": ida,
-        "returnDate": volta,
-        "currency": "BRL"
-    }
+payload = {
+    "searches": [
+        {
+            "origin": ORIGIN,
+            "destination": dest,
+            "departureDate": ida,
+            "returnDate": volta
+        }
+    ]
+}
 
     try:
         response = requests.post(url, json=payload)
@@ -43,13 +46,13 @@ def fetch_price(dest):
 
         if isinstance(data, list) and len(data) > 0:
             price = None
+
             if isinstance(data, list) and len(data) > 0:
-                item = data[0]
-                price = (
-                item.get("price") or
-                item.get("bestPrice") or
-                item.get("totalPrice")
-                )
+                first = data[0]
+                flights = first.get("flights", [])
+            
+                if flights:
+                    price = flights[0].get("price")
         else:
             price = None
 

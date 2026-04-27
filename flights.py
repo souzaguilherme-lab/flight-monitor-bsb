@@ -36,8 +36,10 @@ def fetch_price(dest):
     }
 
     try:
-        response = requests.post(url, json=payload, timeout=60)
+        response = requests.post(url, json=payload)
+        print("RESPOSTA BRUTA:", response.text)  # 👈 ADICIONE ISSO
         data = response.json()
+        print("JSON:", data)  # 👈 E ISSO
 
         if isinstance(data, list) and len(data) > 0:
             price = None

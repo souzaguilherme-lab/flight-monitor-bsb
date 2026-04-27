@@ -40,7 +40,14 @@ def fetch_price(dest):
         data = response.json()
 
         if isinstance(data, list) and len(data) > 0:
-            price = data[0].get("price")
+            price = None
+            if isinstance(data, list) and len(data) > 0:
+    item = data[0]
+    price = (
+        item.get("price") or
+        item.get("bestPrice") or
+        item.get("totalPrice")
+    )
         else:
             price = None
 

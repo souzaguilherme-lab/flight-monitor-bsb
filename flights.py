@@ -38,21 +38,21 @@ payload = {
     ]
 }
 
-    try:
-        response = requests.post(url, json=payload)
-        print("RESPOSTA BRUTA:", response.text)  # 👈 ADICIONE ISSO
-        data = response.json()
-        print("JSON:", data)  # 👈 E ISSO
+try:
+    response = requests.post(url, json=payload)
+    print("RESPOSTA BRUTA:", response.text)  # 👈 ADICIONE ISSO
+    data = response.json()
+    print("JSON:", data)  # 👈 E ISSO
+
+    if isinstance(data, list) and len(data) > 0:
+        price = None
 
         if isinstance(data, list) and len(data) > 0:
-            price = None
-
-            if isinstance(data, list) and len(data) > 0:
-                first = data[0]
-                flights = first.get("flights", [])
+            first = data[0]
+            flights = first.get("flights", [])
             
-                if flights:
-                    price = flights[0].get("price")
+            if flights:
+                price = flights[0].get("price")
         else:
             price = None
 

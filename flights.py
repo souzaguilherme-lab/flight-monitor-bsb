@@ -17,55 +17,17 @@ DESTINATIONS = [
 
 DB_NAME = "flights.db"
 
+# -----------------------------
+# Datas de busca
+# -----------------------------
 def get_dates():
-    ida = datetime.now() + timedelta(days=30)
+    ida = datetime.now() + timedelta(days=45)
     volta = ida + timedelta(days=7)
     return ida.strftime("%Y-%m-%d"), volta.strftime("%Y-%m-%d")
 
-def fetch_price(dest):
-    ida, volta = get_dates()
-
-    url = f"https://api.apify.com/v2/acts/apify~google-flights-scraper/run-sync-get-dataset-items?token={API_TOKEN}"
-
-payload = {
-    "searches": [
-        {
-            "origin": ORIGIN,
-            "destination": dest,
-            "departureDate": ida,
-            "returnDate": volta
-        }
-    ]
-}
-
-try:
-    response = requests.post(url, json=payload)
-    print("RESPOSTA BRUTA:", response.text)  # 👈 ADICIONE ISSO
-    data = response.json()
-    print("JSON:", data)  # 👈 E ISSO
-
-    if isinstance(data, list) and len(data) > 0:
-        price = None
-
-        if isinstance(data, list) and len(data) > 0:
-            first = data[0]
-            flights = first.get("flights", [])
-            
-            if flights:
-                price = flights[0].get("price")
-        else:
-            price = None
-
-    except Exception as e:
-        print(f"Erro em {dest}: {e}")
-        price = None
-
-    return {
-        "destination": dest,
-        "price": price,
-        "date": datetime.now()
-    }
-
+# -----------------------------
+# Criar banco
+# -----------------------------
 def create_db():
     conn = sqlite3.connect(DB_NAME)
     conn.execute("""
@@ -77,14 +39,81 @@ def create_db():
     """)
     conn.close()
 
+# -----------------------------
+# Buscar preço
+# -----------------------------
+def fetch_price(dest):
+    ida, volta = get_dates()
+
+    url = f"https://api.apify.com/v2/acts/apify~google-flights-scraper/run-sync-get-dataset-items?token={API_TOKEN}"
+
+    payload = {
+        "searches": [
+            {
+                "origin": ORIGIN,
+                "destination": dest,
+                "departureDate": ida,
+                "returnDate": volta
+            }
+        ]
+    }
+
+    try:
+        response = requests.post(url, json=payload, timeout=120)
+        data = response.json()
+
+        price = None
+
+        if isinstance(data, list) and len(data) > 0:
+            first = data[0]
+
+            flights = first.get("flights", [])
+
+            if flights and len(flights) > 0:
+                price = flights[0].get("price")
+
+        print(f"{dest} -> {price}")
+
+    except Exception as e:
+        print(f"Erro em {dest}: {e}")
+        price = None
+
+    return {
+        "destination": dest,
+        "price": price,
+        "date": datetime.now()
+    }
+
+# -----------------------------
+# Salvar dados
+# -----------------------------
 def save(data):
     conn = sqlite3.connect(DB_NAME)
     df = pd.DataFrame(data)
-    df.to_sql("prices", conn, if_exists="append", index=False)
+
+    # salva só preços válidos
+    df = df[df["price"].notnull()]
+
+    if not df.empty:
+        df.to_sql("prices", conn, if_exists="append", index=False)
+
     conn.close()
 
+# -----------------------------
+# Buscar melhores preços
+# -----------------------------
 def get_best_prices():
     conn = sqlite3.connect(DB_NAME)
+
+    # garante que tabela existe
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS prices (
+            destination TEXT,
+            price REAL,
+            date TEXT
+        )
+    """)
+
     query = """
         SELECT destination, MIN(price) as best_price
         FROM prices
@@ -92,10 +121,14 @@ def get_best_prices():
         GROUP BY destination
         ORDER BY best_price ASC
     """
+
     df = pd.read_sql(query, conn)
     conn.close()
     return df
 
+# -----------------------------
+# Executar busca
+# -----------------------------
 def run_search():
     if not API_TOKEN:
         raise ValueError("API_TOKEN não configurado")
@@ -105,6 +138,10 @@ def run_search():
     results = []
 
     for dest in DESTINATIONS:
-        results.append(fetch_price(dest))
+        print(f"Buscando {dest}...")
+        result = fetch_price(dest)
+
+        if result["price"] is not None:
+            results.append(result)
 
     save(results)

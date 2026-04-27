@@ -42,12 +42,12 @@ def fetch_price(dest):
         if isinstance(data, list) and len(data) > 0:
             price = None
             if isinstance(data, list) and len(data) > 0:
-    item = data[0]
-    price = (
-        item.get("price") or
-        item.get("bestPrice") or
-        item.get("totalPrice")
-    )
+                item = data[0]
+                price = (
+                item.get("price") or
+                item.get("bestPrice") or
+                item.get("totalPrice")
+                )
         else:
             price = None
 

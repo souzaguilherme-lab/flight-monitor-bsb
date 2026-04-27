@@ -88,10 +88,19 @@ def fetch_price(dest):
 # Salvar dados
 # -----------------------------
 def save(data):
+    if not data:
+        print("Nada para salvar.")
+        return
+
     conn = sqlite3.connect(DB_NAME)
     df = pd.DataFrame(data)
 
-    # salva só preços válidos
+    # garante que coluna existe
+    if "price" not in df.columns:
+        print("Coluna price não existe no retorno.")
+        conn.close()
+        return
+
     df = df[df["price"].notnull()]
 
     if not df.empty:
